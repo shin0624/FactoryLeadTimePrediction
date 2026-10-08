@@ -24,12 +24,14 @@ namespace FactoryLeadTimePrediction
             파이프라인 내에서 int를 float로 캐스팅하고 Concatenate()를 수행해야 함.
             ML.NET은 이를 위해 Transforms.Conversion.ConvertType 메서드를 제공.
         */
-        [LoadColumn(3), ColumnName("Label")] public float LeadTime{get;set;}// 실제 리드타임(LightGBM이 예측할 대상)
+        [LoadColumn(3), ColumnName("LeadTime")] public float LeadTime{get;set;}// 실제 리드타임(LightGBM이 예측할 대상)
     }
 
     public class LeadTimePrediction// 예측 결과 데이터의 구조 정의
     {
         [ColumnName("Score")] public float PredictedLeadTime{get;set;}//모델이 예측한 리드타임
+
+        [ColumnName("FeatureContributions")] public float[]? FeatureContributions {get;set;} // 모델 예측 결과의 근거를 Feature에 대한 기여도 점수로 출력하기 위한 기여도점수 배열 선언.
     }
 
     class Program
@@ -87,71 +89,71 @@ namespace FactoryLeadTimePrediction
 
             var trainingPipeline = dataProcessPipeline.Append(trainer);// 데이터 전처리 파이프라인과 트레이너를 결합
 
-            System.Console.WriteLine("---------LightGBM 모델 학습 시작---------");
+            Console.WriteLine("---------LightGBM 모델 학습 시작---------");
+
             var trainedModel = trainingPipeline.Fit(trainDataView);//IDataView 형식으로 변환된 학습용 데이터들을 주입하고 학습을 시작.
             // Fit()메서드는 매개변수로 들어온 IDataView 형식의 데이터로 학습을 시작하고, 종료 시 ITransformer 형태의 학습 모델을 반환하는 메서드. 
-            System.Console.WriteLine("---------모델 학습 완료---------");
 
-            var predictionEngine = mlContext.Model.CreatePredictionEngine<ProductionData, LeadTimePrediction>(trainedModel);// 학습 완료된 trainedModel을 넣어서 실시간 예측 엔진 객체 생성
-            // ModelOperationsCatalog.CreatePredictionEngine<TSrc, TDst>(ITransformer, DataViewSchema) : 일회성 예측을 위한 예측 엔진을 만드는 메서드. 
-            // TSrc : 입력 데이터(제조 데이터)
-            // TDst : 출력 데이터 (모델이 예측한 리드타임)
-            // 매개변수 ITransformer : 예측에 사용할 ITransformer형 모델
-            // 매개변수 DataViewSchema : 입력 스키마
-            // 리턴 : PredictionEngine<TSrc, TDst>
-            // CreatePredictionEngine()을 사용하면 학습 완료된 모델을 메모리에 올려놓고 공장에서 새로운 데이터가 들어올 때 마다 N밀리초(ms)만에 실시간으로 생산량이나 리드타임을 찍어내는 고성능 예측엔진을 빌드할 수 있음.
+            Console.WriteLine("---------모델 학습 완료---------");
 
-            System.Console.Write("투입량 : ");
-            string iqInput = Console.ReadLine();
-            System.Console.Write("온도 : ");
-            string mtInput = Console.ReadLine();
-            System.Console.Write("작업자 수 : ");
-            string wcInput = Console.ReadLine();
-                        
-            if(float.TryParse(iqInput, out float iq))
-            {
-                System.Console.WriteLine("형변환 성공 1");
-            }
-            else
-            {
-                System.Console.WriteLine("형변환 실패 1");
-            }
-
-            if(float.TryParse(mtInput, out float mt))
-            {
-                System.Console.WriteLine("형변환 성공 2");
-            }
-            else
-            {
-                System.Console.WriteLine("형변환 실패 2");
-            }
-
-            if(float.TryParse(wcInput, out float wc))
-            {
-                System.Console.WriteLine("형변환 성공 3");
-            }
-            else
-            {
-                System.Console.WriteLine("형변환 실패 3");
-            }
             
-        
+            var transformedTrainedModel = trainedModel.Transform(trainDataView); // 기여도 계산기에 넣기 위한 Features컬럼이 있는 데이터를 만든다. 
+
+
+            // -- 예측결과의 근거 산출을 위한 기여도 계산기 삽입 과정 추가 ---
+            var contributionCalcPipeline = mlContext.Transforms.CalculateFeatureContribution(trainedModel.LastTransformer, normalize : false).Fit(transformedTrainedModel);
+            /*
+                ExplainabilityCatalog.CalculateFeatureContribution(매개변수 너무 김) :  개별 데이터 예측 시, Feature가 예측값에 어떤 긍정적/부정적 영향을 미쳤는지(기여도)를 계산하는 설명 도구 메서드.
+                - 즉, 각 Features(투입수량, 기계온도, 작업자수)에 어느정도 기여도가 가해져서 LightGBM의 최종 예측 리드타임이 62분이 나왔는지를 확인할 수 있다.
+                - 예를 들어, 투입 수량 점수가 +12.5, 작업자 수 점수가 -5.0이라면
+                    "투입 수량이 많아서 리드타임이 12.5분 늘어났고, 작업자를 많이 배치해서 5분이 단축된 결과, 리드타임을 MM분이라고 예측할 수 있었다"라는 예측결과 도출의 근거를 알 수 있음.
+                - 주요 매개변수
+                    ISingleFeaturePredictionTransformer<TModel> predictionTransformer : 예측 모델
+                    int numberOfPositiveContributions : 긍정적인 기여도의 수. 가장 높은 크기에서 가장 낮은 크기로 정렬. 미지정 시 10
+                    int numberOfNegativeContributions : 부정적인 기여도의 수. 가장 높은 크기에서 가장 낮은 크기로 정렬. 미지정시 10
+                    bool normalize : 기여도를 -1~1간격으로 정규화해야 하는지 여부
+                - 기여도 계산기도 Fit()을 한번 거쳐야 ITransformer형이 된다. (공식문서 예시에서도 계산기 뒤에 Fit()을 붙인 것이 이것때문인듯)
+            */
+
+            var scoringPipeline = trainedModel.Append(contributionCalcPipeline);// 기여도 컬럼을 만들어주는 변환기가 붙은 새 모델.
+
+            var predictionEngine_contributionCalcResult = mlContext.Model.CreatePredictionEngine<ProductionData, LeadTimePrediction>(scoringPipeline);// 기여도 컬럼이 붙은 새 모델로 예측엔진 생성
+
+            // 잠시 비활성화
+            // var predictionEngine = mlContext.Model.CreatePredictionEngine<ProductionData, LeadTimePrediction>(trainedModel);// 학습 완료된 trainedModel을 넣어서 실시간 예측 엔진 객체 생성
+            /*
+            ModelOperationsCatalog.CreatePredictionEngine<TSrc, TDst>(ITransformer, DataViewSchema) : 일회성 예측을 위한 예측 엔진을 만드는 메서드. 
+            TSrc : 입력 데이터(제조 데이터)
+            TDst : 출력 데이터 (모델이 예측한 리드타임)
+            매개변수 ITransformer : 예측에 사용할 ITransformer형 모델
+            매개변수 DataViewSchema : 입력 스키마
+            리턴 : PredictionEngine<TSrc, TDst>
+            CreatePredictionEngine()을 사용하면 학습 완료된 모델을 메모리에 올려놓고 공장에서 새로운 데이터가 들어올 때 마다 N밀리초(ms)만에 실시간으로 생산량이나 리드타임을 찍어내는 고성능 예측엔진을 빌드할 수 있음.(ML.NET IDataView의 지연평가 기반 구조 + c#의 런타임속도 )        
+            */
+           
             var newSituation = new ProductionData
             {
-                InputQuantity =iq,
-                MachineTemperature = mt,
-                WorkerCount = wc
+                InputQuantity =180.0f,
+                MachineTemperature = 74.0f,
+                WorkerCount = 8.0f
             }; // 예측 수행에 사용될 새로운 공정 환경 데이터 객체
 
-            var prediction = predictionEngine.Predict(newSituation);// 새로운 공정환경 데이터를 예측 엔진에 주입 후 예측 시작
+            var prediction = predictionEngine_contributionCalcResult.Predict(newSituation);// 새로운 공정환경 데이터를 예측 엔진에 주입 후 예측 시작
             // PredictionEngine.Predict(TSrc) : 예측 파이프라인을 실행. 매개변수 TSrc는 예측을 실행할 소스(예제), 리턴값은 TDst 타입의 예측 결과 개체
             // PredictionEngine.Predcit(TSrc, TDst) : 예측 파이프라인 실행. 매개변수 TSrc는 예측을 수행할 소스(예제)이며, TDst는 예측 결과를 저장할 개체. null로 둘 경우 새 항목이 만들어지고, 명시하면 이전 항목이 다시 사용됨.
 
-            System.Console.WriteLine("---------실시간 리드타임 예측 결과---------");
-            System.Console.WriteLine($"[입력 조건]\n1. 투입량 : {newSituation.InputQuantity}개\n2. 온도 : {newSituation.MachineTemperature}도\n3. 작업자 수 : {newSituation.WorkerCount}명");
-            System.Console.WriteLine($"[예측 결과]예상 공정 리드타임 : {prediction.PredictedLeadTime:F2}분");
+            Console.WriteLine("---------실시간 리드타임 예측 결과---------");
+            Console.WriteLine($"[입력 조건]\n1. 투입량 : {newSituation.InputQuantity}개\n2. 온도 : {newSituation.MachineTemperature}도\n3. 작업자 수 : {newSituation.WorkerCount}명");
+            Console.WriteLine($"[예측 결과]예상 공정 리드타임 : {prediction.PredictedLeadTime:F2}분");
 
-            mlContext.Model.Save(trainedModel, trainDataView.Schema, "D:/261008_LightGBM_Test/FactoryLeadTimePrediction/models/LightGBM_Model_TrainingTest.zip");
+
+            string[] featuresNames = new[] {"투입량", "온도", "작업자 수"};// 기여도 배열의 라벨 순서는 Features와 같음.
+            for(int i=0; i< featuresNames.Length; i++)
+            {
+                Console.WriteLine($"- {featuresNames[i]} 기여도 : {prediction.FeatureContributions?[i]:F2}");
+            }
+
+            //mlContext.Model.Save(trainedModel, trainDataView.Schema, "models/LightGBM_Model.zip");
     }
 }
 }
