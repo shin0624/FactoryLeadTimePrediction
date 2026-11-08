@@ -4,6 +4,7 @@ using Microsoft.ML;
 using Microsoft.ML.Data;
 using Microsoft.ML.Trainers.LightGbm;
 using FactoryLeadTimePrediction.LightGBM.A_RealDataLeadTime;
+using FactoryLeadTimePrediction.LightGBM.B_SyntheticLeadTime;
 
 namespace FactoryLeadTimePrediction
 {
@@ -22,8 +23,12 @@ namespace FactoryLeadTimePrediction
 
             
             // ---------- A_RealDataLeadTime : 학습 및 평가 (2단계) ----------
-            var realDataInstance = LightGBM_RealDataLeadTime.Instance();
-            realDataInstance.StartRealDataTraining();
+            //var realDataInstance = LightGBM_RealDataLeadTime.Instance();
+            //realDataInstance.StartRealDataTraining();
+
+            // ---------- B_SyntheticLeadTime : 파이프라인 검증 ----------
+            var syntheticInstance = LightGBM_SyntheticLeadTime.Instance();
+            syntheticInstance.StartSyntheticLeadTime();
         }
     }
 }
