@@ -274,3 +274,227 @@ string[] featuresNames = new[] {"투입량", "온도", "작업자 수"}; // 기�
 - 노이즈가 커지면 R²가 떨어진다. 이것은 모델의 한계가 아니라 '설명 불가능한 변동'이 늘어난 것이다.
 - 현실 데이터에는 항상 노이즈가 있으므로, R² 1.0은 목표가 될 수 없다. 이론 상한을 넘으면 오히려 데이터 누출을 의심해야 한다.
 </details> 
+
+## 261115_Deep Learning : 주조품 외관 양/불량 이진분류
+<details>
+<summary>ML.NET ImageClassificationTrainer 기반 전이학습 (Accuracy 99.02% / 학습 2.5분)</summary>
+
+### 목적
+- 머신러닝(LightGBM, 정형 데이터)에서 딥러닝(CNN, 이미지)으로 넘어가 **C#만으로 비전 품질검사 모델**을 만들 것
+- 전이학습(Transfer Learning)이 ML.NET에서 어떻게 구현되는지, Python/PyTorch와 무엇이 다른지 확인
+
+### 사용 데이터셋
+| 항목 | 내용 |
+| :--- | :--- |
+| 이름 | Casting Product Image Data for Quality Inspection |
+| 출처 | Kaggle (제출자 : Ravirajsinh Dabhi) |
+| 대상 | 펌프 임펠러(submersible pump impeller) 주조품 상면 |
+| 형식 | JPEG, 300x300, 3채널 (안정된 조명 환경에서 촬영, 배경 통제됨) |
+| 라이선스 | **CC BY-NC-ND 4.0** |
+
+> **라이선스 준수 사항**
+> `ND(No Derivatives)` 조항 때문에 **원본 이미지와 학습된 모델 가중치를 본 저장소에 포함하지 않는다.**
+> 데이터셋은 저장소 외부 경로에 두고, `.gitignore`로 `*.jpg / *.jpeg / *.png / *.zip / /models / /workspace_casting`을 차단했다.
+> 따라서 이 README는 **수치, 혼동행렬, 로그만으로** 학습 과정과 결과를 기록한다. 재현하려면 Kaggle에서 직접 데이터셋을 받아 `DatasetRoot` 경로를 수정해야 한다.
+
+#### 데이터 분할
+| 분할 | 불량(def_front) | 정상(ok_front) | 합계 | 용도 |
+| :--- | ---: | ---: | ---: | :--- |
+| train | 3,758 | 2,875 | 6,633 | 아래에서 90:10으로 재분할 |
+| &nbsp;&nbsp;└ train | — | — | 5,970 | 실제 학습 |
+| &nbsp;&nbsp;└ validation | — | — | 663 | 에폭별 검증 / 조기 종료 판단 |
+| test | 453 | 262 | 715 |*최종 평가 1회만 |
+
+> **왜 3분할?** : `ImageClassificationTrainer`는 에폭마다 검증 정확도를 계산하고 조기 종료 판단에 씀. 여기에 test를 넣으면 test가 학습 과정에 관여해 오염됨
+
+#### 베이스라인
+```
+test 기준 : 불량 453 / 715 = 63.36%
+-> 아무것도 학습하지 않고 "전부 불량"이라고만 답해도 Accuracy 63.36%
+```
+
+---
+
+### 입력 / 출력 데이터
+```csharp
+CastingImageData // 입력 : 프로퍼티 2개
+{
+    public string ImagePath // 이미지 파일의 절대 경로 (픽셀이 아니라 경로)
+    public string Label     // "defect" 또는 "ok"
+}
+
+CastingPrediction // 출력
+{
+    [ColumnName("PredictedLabel")] public string PredictedLabel // 예측 클래스명
+    public float[] Score  // 클래스별 확률 (길이 2)
+}
+```
+
+> **LightGBM과의 차이** : `LeadTimeFeature`는 피처 6개를 사람이 직접 설계해 float로 선언.( **CNN이 픽셀에서 피처를 스스로 학습**하기 때문)
+> 그래서 `Concatenate("Features", ...)`에 해당하는 단계가 아예 없고, `CalculateFeatureContribution()`도 쓸 수 없음. 비전 모델의 설명가능성은 Grad-CAM 같은 완전히 다른 기법이며 ML.NET에 내장 지원이 없다. 대신 **오분류 사례의 확률값 분석**으로 모델의 한계를 파악
+
+---
+
+### 학습 방법
+
+#### 1. 전처리 파이프라인
+```csharp
+var preprocessingPipeline = mlContext.Transforms.Conversion
+    .MapValueToKey(outputColumnName: "LabelKey", inputColumnName: "Label")
+    .Append(mlContext.Transforms.LoadRawImageBytes(
+        outputColumnName: "ImageBytes", imageFolder: null, inputColumnName: "ImagePath"));
+
+var preprocessingTransformer = preprocessingPipeline.Fit(trainAllView);
+IDataView trainTransformed = preprocessingTransformer.Transform(trainView);
+IDataView valTransformed   = preprocessingTransformer.Transform(valView); // 필수
+```
+- `MapValueToKey` : 문자열 라벨("defect"/"ok")을 내부 Key 타입(0, 1)으로 변환. 분류 알고리즘은 문자열을 직접 못 다룸
+- `LoadRawImageBytes` : 경로를 읽어 원본 바이트로 변환. 디코딩/리사이즈/정규화는 트레이너가 내부에서 알아서 처리
+- **`ValidationSet`은 반드시 직접 `Transform()` 해야 함** -> 아래 트러블슈팅 참조.
+
+#### 2. 트레이너 옵션
+```csharp
+var options = new ImageClassificationTrainer.Options
+{
+    FeatureColumnName = "ImageBytes",
+    LabelColumnName   = "LabelKey",
+    Arch              = ImageClassificationTrainer.Architecture.MobilenetV2,
+    Epoch = 20, BatchSize = 16, LearningRate = 0.01f,
+    ValidationSet = valTransformed,                              // 전처리 거친 것
+    MetricsCallback = metrics => Console.WriteLine($"    {metrics}"),
+    WorkspacePath = WorkspacePath,
+    ReuseTrainSetBottleneckCachedValues = true,
+    ReuseValidationSetBottleneckCachedValues = true,
+    EarlyStoppingCriteria = new ImageClassificationTrainer.EarlyStopping(
+        minDelta: 0.001f, patience: 5,
+        metric: ImageClassificationTrainer.EarlyStoppingMetric.Accuracy),
+};
+
+var trainingPipeline = mlContext.MulticlassClassification.Trainers.ImageClassification(options)
+    .Append(mlContext.Transforms.Conversion.MapKeyToValue("PredictedLabel", "PredictedLabel"));
+```
+
+| 옵션 | 역할 |
+| :--- | :--- |
+| `Arch = MobilenetV2` | ImageNet 사전학습 백본. 가볍고 빨라 CPU 학습에 적합. 첫 실행 시 자동 다운로드. |
+| `WorkspacePath` | **병목(bottleneck) 피처 캐시 폴더.** 전이학습은 백본을 1회만 통과시켜 피처를 뽑고 그 피처로 마지막 층만 반복 학습하므로 CPU로도 현실적인 시간에 끝남 |
+| `MetricsCallback` |  없으면 학습 중 아무 출력이 없어 멈춘 것처럼 보임.|
+| `EarlyStoppingCriteria` | 검증 정확도가 더 오르지 않으면 중단 |
+
+> **이진 분류인데 왜 `MulticlassClassification`인가?** : `ImageClassificationTrainer`는 다중분류 카탈로그에만 존재. 클래스가 2개면 이진 분류와 수학적으로 동일하게 동작하지만 평가 지표가 `MicroAccuracy` 등 다중분류 쪽으로 나온다. 그래서 Precision/Recall은 혼동행렬에서 직접 계산
+
+#### 3. 전처리 + 모델 재결합
+```csharp
+var fullModel = preprocessingTransformer.Append(trainedModel);
+mlContext.Model.Save(fullModel, trainAllView.Schema, ModelSavePath);
+```
+전처리를 체인에서 분리했으므로 `trainedModel`은 원본 DTO를 받지 못함. `PredictionEngine`과 `Model.Save`에는 반드시 재결합한 `fullModel`을 써야 함.  그러지 않으면 나중에 Load한 모델이 "경로 -> 바이트" 변환을 못 해 쓸 수 없는 모델이 된다
+
+---
+
+### 결과
+
+#### 학습 로그 (일부)
+```
+Phase: Bottleneck Computation, Dataset used: Train, Image Index: 5941
+    Epoch: 0, Train Accuracy: 0.8668, Cross-Entropy: 0.5157 | Validation Accuracy: 0.8835
+    Epoch: 1, Train Accuracy: 0.9679, Cross-Entropy: 0.0923 | Validation Accuracy: 0.9901
+    Epoch: 2, Train Accuracy: 0.9857, Cross-Entropy: 0.0547 | Validation Accuracy: 0.9929
+    Epoch: 3, Train Accuracy: 0.9881, Cross-Entropy: 0.0461 | Validation Accuracy: 0.9943
+    Epoch: 4, Train Accuracy: 0.9906, Cross-Entropy: 0.0405 | Validation Accuracy: 0.9957
+    Epoch: 5~9 ................................................ Validation Accuracy: 0.9957 (변화 없음)
+Froze 2 variables. Converted 2 variables to const ops.
+========== 학습 완료 : 2.5분 소요 ==========
+```
+
+#### 최종 성능
+```
+---------- Score 배열 인덱스 <-> 클래스 대응 ----------
+  Score[0] = "defect"
+  Score[1] = "ok"
+```
+
+| 지표 | train (5,970장) | **test (715장)** | 베이스라인 |
+| :--- | ---: | ---: | ---: |
+| MicroAccuracy | 99.50% | **99.02%** | 63.36% |
+| MacroAccuracy | 99.50% | **98.83%** | — |
+| LogLoss | 0.0272 | **0.0346** | — |
+| Precision(불량) | 99.64% | **98.90%** | — |
+| **Recall(불량)** | 99.47% | **99.56%** | — |
+| F1(불량) | 99.56% | **99.23%** | — |
+
+**혼동행렬 (test / "불량"을 Positive로 설정)**
+
+| | 예측 : 불량 | 예측 : 정상 |
+| :--- | ---: | ---: |
+| **실제 : 불량** | 451 (TP) | **2 (FN) <- 불량 유출** |
+| **실제 : 정상** | 5 (FP) | 257 (TN) |
+
+> **왜 Recall을 주 지표로 삼는가**
+> ```
+>              예측:정상            예측:불량
+> 실제:정상    TN(정상 출하)        FP(멀쩡한 걸 폐기)
+> 실제:불량    FN(불량 유출)        TP(정상 검출)
+>              
+> ```
+
+---
+
+### 해석
+
+#### 1. 과적합이 거의 없음
+```
+train Accuracy 99.50%  ->  test 99.02%   격차 0.48%p
+```
+LightGBM B는 학습 R² 0.971 / 검증 0.748로 **격차 0.223**이었다. 여기는 격차가 거의 0이다. 이유는 아래와 같다.
+- **데이터가 많음** : 5,970장 vs 176행
+- **학습 파라미터가 적음** :  MobilenetV2 백본은 동결되고 마지막 분류층만 학습한다. **외울 수 있는 용량 자체가 작아서 과적합하기 어려움**
+
+Epoch 1에서 이미 검증 99.0%에 도달한 것도 같은 이유로, 백본이 ImageNet에서 모양/질감/엣지를 이미 다 배워와서 그 피처를 2개 클래스로 가르는 분류기만 학습시킨 것
+
+#### 2. 오분류 사례 분석
+`Score` 배열을 함께 출력한 것에서 "간신히 틀린 것"과 "확신하며 틀린 것"이 구분됨
+
+```
+FN cast_def_0_2483.jpeg   Score=[0.498, 0.502]   <- 간신히 틀림 (임계값으로 구제 가능)
+FN cast_def_0_150.jpeg    Score=[0.086, 0.914]   <- 확신하며 틀림 = 모델의 진짜 한계
+
+FP cast_ok_0_1368.jpeg    Score=[0.500, 0.500]   <- 완전히 모름
+FP cast_ok_0_2311.jpeg    Score=[0.506, 0.494]   <- 간신히 틀림
+FP cast_ok_0_259.jpeg     Score=[0.538, 0.462]
+FP cast_ok_0_1022.jpeg    Score=[0.626, 0.374]
+FP cast_ok_0_10.jpeg      Score=[0.731, 0.269]   <- 확신하며 틀림
+```
+
+**임계값을 0.5 -> 0.45로 낮추면** `cast_def_0_2483`(0.498)을 잡아 FN이 2 -> 1건이 된다. 반면 FP 쪽 0.494 / 0.462는 여전히 틀리므로 **FN만 줄고 FP는 늘지 않는다.** 
+
+> `PredictedLabel`은 단순히 Score가 가장 큰 쪽을 고른 결과(argmax = 임계값 0.5)다. 품질검사에서 0.5는 최적이 아님. 이 조정을 하려면 `PredictedLabel`이 아니라 **`Score` 원본 확률**이 필요. 그래서 출력 DTO에 `float[] Score`를 둔 것이 중요
+
+반면 `cast_def_0_150`(0.086)은 모델이 "정상"이라고 **91.4% 확신**하며 틀림. 임계값으로 잡을 수 없는 모델의 근본적 한계선
+
+---
+
+### 트러블슈팅
+
+#### `ArgumentOutOfRangeException: Column 'LabelKey' not found`
+```
+at Microsoft.ML.Vision.ImageClassificationTrainer.CacheFeaturizedImagesToDisk(...)
+at Microsoft.ML.Trainers.TrainerEstimatorBase.Fit(IDataView input)
+```
+**원인** : `options.ValidationSet`에 전처리를 거치지 않은 원본 `IDataView`를 넘겼다.
+```
+trainingPipeline.Fit(trainView)
+    +- MapValueToKey      -> trainView에 적용 -> LabelKey 생성됨 (O)
+    +- LoadRawImageBytes  -> trainView에 적용 -> ImageBytes 생성됨 (O)
+    +- ImageClassification(options)
+          +- options.ValidationSet = valView   <- 원본! LabelKey 없음 (X)
+```
+`EstimatorChain.Fit()`은 **넘겨받은 데이터에만** 변환을 순차 적용한다. `options.ValidationSet`은 체인 바깥에서 트레이너에게 직접 꽂히는 별개의 `IDataView`이므로 체인이 알아서 변환해주지 않는다.
+
+**해결** : 전처리만 먼저 `Fit()`해서 `ITransformer`를 얻고, train과 validation 양쪽을 직접 `Transform()`한다. 단 이렇게 하면 전처리를 체인에서 빼야 하고(이중 적용 시 컬럼 충돌), 평가/저장 시 `Append()`로 재결합해야 한다.
+
+#### `ReuseTrainSetBottleneckCachedValues = true`
+두 번째 실행부터 피처 추출을 건너뛰어 훨씬 빠르지만, **데이터나 `Arch`를 바꿨는데 `true`로 두면 옛 캐시를 재사용해 잘못된 결과가 나온다.** 변경 시 `WorkspacePath` 폴더를 비울 것.
+
+---
+</details>

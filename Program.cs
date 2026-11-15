@@ -5,6 +5,7 @@ using Microsoft.ML.Data;
 using Microsoft.ML.Trainers.LightGbm;
 using FactoryLeadTimePrediction.LightGBM.A_RealDataLeadTime;
 using FactoryLeadTimePrediction.LightGBM.B_SyntheticLeadTime;
+using FactoryLeadTimePrediction.DeepLearning.A_CastingDefectClassification;
 
 namespace FactoryLeadTimePrediction
 {
@@ -27,8 +28,12 @@ namespace FactoryLeadTimePrediction
             //realDataInstance.StartRealDataTraining();
 
             // ---------- B_SyntheticLeadTime : 파이프라인 검증 ----------
-            var syntheticInstance = LightGBM_SyntheticLeadTime.Instance();
-            syntheticInstance.StartSyntheticLeadTime();
+            //var syntheticInstance = LightGBM_SyntheticLeadTime.Instance();
+            //syntheticInstance.StartSyntheticLeadTime();
+
+            // ---------- DeepLearning A : 주조품 양/불량 분류
+            var castingInstance = DeepLearning_CastingDefect.Instance();
+            castingInstance.StartCastingDefectClassification();
         }
     }
 }

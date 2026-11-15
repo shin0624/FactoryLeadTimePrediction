@@ -2,3 +2,9 @@
 /obj/Debug
 /models
 /data
+/workspace_casting
+*.zip
+*.onnx
+*.png
+*.jpg
+*.jpeg

@@ -13,7 +13,8 @@
     <SourceRoot Include="C:\Users\qjatn\.nuget\packages\" />
   </ItemGroup>
   <ImportGroup Condition=" '$(ExcludeRestorePackageImports)' != 'true' ">
-    <Import Project="$(NuGetPackageRoot)microsoft.ml\5.0.0\build\netstandard2.0\Microsoft.ML.props" Condition="Exists('$(NuGetPackageRoot)microsoft.ml\5.0.0\build\netstandard2.0\Microsoft.ML.props')" />
+    <Import Project="$(NuGetPackageRoot)scisharp.tensorflow.redist\2.16.0\build\netstandard2.0\SciSharp.TensorFlow.Redist.props" Condition="Exists('$(NuGetPackageRoot)scisharp.tensorflow.redist\2.16.0\build\netstandard2.0\SciSharp.TensorFlow.Redist.props')" />
+    <Import Project="$(NuGetPackageRoot)microsoft.ml\6.0.0\build\netstandard2.0\Microsoft.ML.props" Condition="Exists('$(NuGetPackageRoot)microsoft.ml\6.0.0\build\netstandard2.0\Microsoft.ML.props')" />
     <Import Project="$(NuGetPackageRoot)lightgbm\4.6.0\build\LightGBM.props" Condition="Exists('$(NuGetPackageRoot)lightgbm\4.6.0\build\LightGBM.props')" />
   </ImportGroup>
 </Project>
