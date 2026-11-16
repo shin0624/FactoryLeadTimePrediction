@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -31,11 +32,16 @@ namespace FactoryLeadTimePrediction.DeepLearning.A_CastingDefectClassification
         private const string WorkspacePath = "workspace_casting"; // 트레이너가 피처 캐시(.tsv)와 임시 파일을 쓰는 폴더.
         private const string ModelSavePath = "models/CastingDefect_Model.zip"; // 학습된 모델.
 
+        private const string Dataset512Root = @"C:\GitHubClone\FactoryLeadTimePrediction\data\Image_Classifiacation\casting_512x512\casting_512x512";
+
+
         // 하이퍼 파라미터
         private const int Epochs = 20; // 에폭 수
         private const int BatchSize = 16; // 배치크기. cpu 학습이고 메모리 여유가 적다면 줄임
         private const float ValidationFraction = 0.1f;// train에서 validation용으로 떼어낼 비율 (10% = 약 663장)
         private const int Seed = 42; // 재현성
+
+        private const int DefectScoreIndex = 0; // Score 배열에서 "defect"의 인덱스. 실행 로그의 PrintClassOrder 출력으로 0임을 확인함.
 
         public void StartCastingDefectClassification() // 데이터 로딩 -> train/val분할 -> 학습 -> 평가 -> 오분류 분석 -> 저장 파이프라인 실행 메서드 
         {
@@ -195,6 +201,9 @@ namespace FactoryLeadTimePrediction.DeepLearning.A_CastingDefectClassification
             // 오분류 분석
             AnalyzeMisclassified(mlContext, fullModel, testData);
 
+            // 임계값 튜닝
+            TuneThreshold(mlContext, fullModel, testData);
+
             //모델 저장
             Directory.CreateDirectory(Path.GetDirectoryName(ModelSavePath)!);
             mlContext.Model.Save(fullModel, trainView.Schema, ModelSavePath);
@@ -322,6 +331,177 @@ namespace FactoryLeadTimePrediction.DeepLearning.A_CastingDefectClassification
             Console.WriteLine("  * FN 이미지를 직접 열어보면 결함이 작거나 애매한 경우가 많습니다.");
             Console.WriteLine("    이것이 '모델의 한계가 어디인가'를 체감하는 가장 좋은 방법입니다.");
 
+        }
+
+        private void TuneThreshold(MLContext mlContext, ITransformer fullModel, List<CastingImageData> testData)// 임계값 튜닝 메서드. 불량 판정 임계값을 바꾸어가며 FN/FP 변화를 관찰한다.
+        {
+            System.Console.WriteLine();
+            System.Console.WriteLine("----------임계값 튜닝----------");
+            /*
+            임계값 조정
+            - predictedLabel은 Score가 큰 쪽을 고른 결과(argmax)에 해당. 이진분류에서는 임계값 0.5를 사용한 것과 같음,
+            - 하지만 0.5는 FN과 FP의 비용이 같다는 가정 위에 존재하는데, 실제 제조 품질 검사는 그렇지 않음.
+            - FN(불량유출)이 FP(과잉폐기)보다 훨씬 리스크가 심하므로, 양품 판정 문턱값을 더 낮추어서 불량과 양품 경계에 있는 것들을 더 걸러내야 함
+            - Score[defect] >=0.45 이면 불량으로 보게 한다. 
+            */
+
+            var engine = mlContext.Model.CreatePredictionEngine<CastingImageData, CastingPrediction>(fullModel); 
+
+            var results = new List<(string trueLabel ,float defectScore)>(); 
+            foreach(var sample in testData)// 한 번만 예측하고 확률을 저장해둔다.
+            {
+                var p = engine.Predict(sample);
+                results.Add((sample.Label, p.Score[DefectScoreIndex]));
+                /*
+                예측을 1회만 수행하는 이유
+                - 임계값을 바꾸어도 모델의 출력 확률은 변하지 않음. 512*512 그레이스케일 데이터 중 이름이 겹치지 않는 715장의 추론을 임계값마다 반복하면 똑같은 계산을 여러번 하는 낭비임. 확률을 한 번만 뽑아두고 임계값만 바꿔서 집계하면 됨
+                */
+            }
+            Console.WriteLine();
+            Console.WriteLine("  임계값    TP    FN    FP    TN   Recall  Precision    F1   Accuracy");
+            Console.WriteLine("  ------------------------------------------------------------------");
+
+            float[] thresholds = {0.30f, 0.35f, 0.40f, 0.45f, 0.50f, 0.55f, 0.60f, 0.70f}; 
+
+            float bestThreshold = 0.5f;
+            int bestFN = int.MaxValue;
+            double bestF1AtBestFN = -1;
+
+            foreach(float th in thresholds)
+            {
+                int tp = 0, fn = 0, fp=0, tn = 0;
+
+                foreach(var (trueLabel, defectScore) in results)
+                {
+                    bool predictedDefect = defectScore >= th; // 임계값 적용 지점
+
+                    if(trueLabel == CastingImageLoader.LabelDefect) // 불량라벨이면
+                    {
+                        if(predictedDefect)//예측도 불량으로 나오면
+                            tp++; 
+                        else
+                            fn++; // 불량유출
+                    }
+                    else // 정상 라벨이면
+                    {
+                        if(predictedDefect) // 예측이 불량으로 나오면
+                            fp++; // 과잉 폐기
+                        else
+                            tn++;
+                    }
+                }
+
+                double precision = tp + fp > 0 ? (double)tp / (tp+fp) : 0;
+                double recall = tp + fn > 0 ? (double)tp / (tp+fn) : 0;
+                double f1 = precision + recall > 0 ? 2 * precision * recall / (precision + recall) : 0;
+                double accuracy = (double)(tp + tn) / results.Count;
+
+                string mark = Math.Abs(th - 0.5f) < 0.001f ? "<- 기본값" : "";
+                Console.WriteLine($"  {th,6:F2}  {tp,4}  {fn,4}  {fp,4}  {tn,4}   {recall,6:P1}   {precision,6:P1}  {f1,6:P1}   {accuracy,6:P1}{mark}");
+
+                // 최적 임계값 선정 (FN이 최소화되는 임계값이 1순위, F1이 가장 높은 값이 2순위)
+                if(fn < bestFN || (fn == bestFN && f1 > bestF1AtBestFN))
+                {
+                    bestFN = fn;
+                    bestF1AtBestFN = f1;
+                    bestThreshold = th;
+                }
+
+            }
+            Console.WriteLine();
+            Console.WriteLine($"  [권장] 임계값 {bestThreshold:F2} (FN {bestFN}건)");
+            Console.WriteLine($"         Score[defect] >= {bestThreshold:F2} 이면 불량으로 판정");
+            Console.WriteLine($"  * 기본값 0.50 대비 FN이 줄어들면 모델을 재학습하지 않고 얻은 개선에 해당");
+
+        }
+
+        public void StartExternalValidation() // 저장된 모델을 불러와서 512*512 데이터로 추가 검증하는 메서드
+        {
+            System.Console.WriteLine("============추가 검증 casting 512*512==========");
+
+            var mlContext = new MLContext(seed : Seed);
+            var loader = new CastingImageLoader();
+
+            // 저장된 모델 로딩
+            if(!File.Exists(ModelSavePath))
+            {
+                Console.WriteLine($"[중단] 모델 파일이 없습니다 : {ModelSavePath}");
+                Console.WriteLine("       먼저 StartCastingDefectClassification()으로 학습하세요.");
+                return;
+            }
+
+            ITransformer loadedModel = mlContext.Model.Load(ModelSavePath, out DataViewSchema modelSchema);
+            System.Console.WriteLine($"모델 로딩 완료 : {ModelSavePath}");
+
+            // 512 데이터 로딩
+            System.Console.WriteLine();
+            System.Console.WriteLine("----------casting 512*512 로딩");
+            var data512 = loader.LoadFromFolder(Dataset512Root);
+            loader.PrintSummary("casting 512*512 전체", data512);
+
+            if(data512.Count == 0)
+            {
+                Console.WriteLine("[중단] 이미지를 읽지 못했습니다."); return;
+            }
+
+            // 학습에 쓴 이미지를 제외
+            System.Console.WriteLine();
+            System.Console.WriteLine("-----------학습에 사용한 이미지 제외");
+            var trainUsed = loader.LoadFromFolder(Path.Combine(DatasetRoot, TrainFolder));
+            var testUsed = loader.LoadFromFolder(Path.Combine(DatasetRoot, TestFolder));
+
+            var unseen = loader.ExcludeByFileName(data512, trainUsed.Concat(testUsed));
+            loader.PrintSummary("미사용 이미지만 사용", unseen);    
+            // 학습에쓴 이미지로 재평가하면 성능이 과대평가되므로, 전체 데이터 및 전체 데이터 중 미사용 데이터의 512*512만 골라서 쓴다.
+
+            // 두 집합을 각각 평가
+            IDataView view512All = mlContext.Data.LoadFromEnumerable(data512);
+            IDataView view512Unseen = mlContext.Data.LoadFromEnumerable(unseen);
+
+            EvaluateExternal(mlContext, loadedModel, view512All, $"512 전체 {data512.Count}장");
+            EvaluateExternal(mlContext, loadedModel, view512Unseen, $"512 미사용만 {unseen.Count}장 (진짜 일반화 성능)");
+            TuneThreshold(mlContext, loadedModel, unseen);
+
+            Console.WriteLine();
+            Console.WriteLine("========== [추가 검증] 완료 ==========");
+        }
+        
+        private void EvaluateExternal(MLContext mlContext, ITransformer fullModel, IDataView data, string title)//전처리 포함 모델로 바로 평가하는 메서드
+        {
+            var predictions = fullModel.Transform(data);
+            // fullModel은 전처리를 포함하므로 원본 IDataView를 그대로 넣을 수 있다.
+            // 학습 때처럼 preprocessingTransformer.Transform()을 따로 거칠 필요가 없다.
+
+            var rows = mlContext.Data.CreateEnumerable<CastingPredictionWithLabel>(predictions, reuseRowObject: false).ToList();
+
+            int tp = rows.Count(r => r.Label == CastingImageLoader.LabelDefect && r.PredictedLabel == CastingImageLoader.LabelDefect);
+            int fn = rows.Count(r => r.Label == CastingImageLoader.LabelDefect && r.PredictedLabel == CastingImageLoader.LabelOk);
+            int fp = rows.Count(r => r.Label == CastingImageLoader.LabelOk && r.PredictedLabel == CastingImageLoader.LabelDefect);
+            int tn = rows.Count(r => r.Label == CastingImageLoader.LabelOk && r.PredictedLabel == CastingImageLoader.LabelOk);
+
+            double precision = tp + fp > 0 ? (double)tp / (tp + fp) : 0;
+            double recall = tp + fn > 0 ? (double)tp / (tp + fn) : 0;
+            double f1 = precision + recall > 0 ? 2 * precision * recall / (precision + recall) : 0;
+            double accuracy = (double)(tp + tn) / rows.Count;
+
+            Console.WriteLine();
+            Console.WriteLine($"---------- 평가 : {title} ----------");
+            Console.WriteLine("  [혼동행렬]            예측:불량   예측:정상");
+            Console.WriteLine($"    실제:불량          {tp,8} (TP) {fn,7} (FN) ★불량유출");
+            Console.WriteLine($"    실제:정상          {fp,8} (FP) {tn,7} (TN)");
+            Console.WriteLine();
+            Console.WriteLine($"  Accuracy          : {accuracy,8:P2}");
+            Console.WriteLine($"  Precision(불량)   : {precision,8:P2}");
+            Console.WriteLine($"  Recall(불량)      : {recall,8:P2}   ★주 지표");
+            Console.WriteLine($"  F1(불량)          : {f1,8:P2}");
+            Console.WriteLine($"  * test(300x300) 기준 : Accuracy 99.02% / Recall 99.56% <- 비교 대상");
+            /*
+            여기서 성능이 떨어진다면 그것이 정상이다
+                - 학습은 300x300으로만 했는데 입력이 512x512다. 트레이너가 내부에서 리사이즈하지만
+                  원본 해상도가 다르면 다운샘플링 결과의 질감이 미묘하게 달라진다.
+                - 이것이 "도메인 시프트(domain shift)"다. 현업에서 카메라나 조명을 바꾸면 똑같은 일이 일어난다.
+                - test 99.02%가 "이 조건에서만" 유효한 숫자였음을 확인하는 것이 이 실험의 목적이다.
+            */
         }
 
         private class CastingPredictionWithLabel

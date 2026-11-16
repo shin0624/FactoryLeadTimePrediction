@@ -32,8 +32,12 @@ namespace FactoryLeadTimePrediction
             //syntheticInstance.StartSyntheticLeadTime();
 
             // ---------- DeepLearning A : 주조품 양/불량 분류
+            //var castingInstance = DeepLearning_CastingDefect.Instance();
+            //castingInstance.StartCastingDefectClassification();
+
+            // ---------- DeepLearning A : 512x512 추가 검증 ----------
             var castingInstance = DeepLearning_CastingDefect.Instance();
-            castingInstance.StartCastingDefectClassification();
+            castingInstance.StartExternalValidation();
         }
     }
 }

@@ -1,0 +1,34 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+<ItemGroup>
+    <PackageReference Include="Microsoft.ML" Version="6.0.0" />
+    <PackageReference Include="Microsoft.ML.ImageAnalytics" Version="6.0.0" />
+    <PackageReference Include="Microsoft.ML.Vision" Version="6.0.0" />
+    <PackageReference Include="SciSharp.TensorFlow.Redist" Version="2.16.0" />
+    <!--
+    추론만 하는데 왜 Vision과 TensorFlow가 필요한가
+        - 저장된 모델 안에 TensorFlow 그래프(MobilenetV2)가 통째로 들어 있다.
+        - Model.Load()가 그 그래프를 복원하려면 런타임이 반드시 있어야 한다.
+        - 그래서 배포 크기가 수백 MB가 된다. ONNX Runtime을 쓰면 훨씬 가벼워지지만,
+          ImageClassificationTrainer는 ONNX export를 지원하지 않는다(README 참조).
+    -->
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FactoryLeadTimePrediction.csproj" />
+    <!--
+    콘솔 프로젝트를 참조하는 이유
+        - CastingImageData / CastingPrediction DTO를 재사용하기 위함이다.
+        - DTO를 복붙하면 한쪽을 고쳤을 때 다른 쪽이 조용히 어긋난다. 프로퍼티 이름 하나만 달라져도
+          ML.NET이 컬럼을 못 찾아 런타임에 터진다. (FeatureContributions 오타 사건과 같은 유형)
+    -->
+  </ItemGroup>
+
+</Project>

@@ -83,5 +83,23 @@ namespace FactoryLeadTimePrediction.DeepLearning.A_CastingDefectClassification
             Console.WriteLine($"               <- 모델이 반드시 이겨야 하는 기준선");
         }
 
+        public List<CastingImageData> ExcludeByFileName(List<CastingImageData> target, IEnumerable<CastingImageData> exclude) // 512*512 그레이스케일 데이터에서 기존 데이터와 파일 명이 겹치는 것을 제외하는 메서드.
+        {
+            var excludeNames = new HashSet<string>(exclude.Select(d => Path.GetFileName(d.ImagePath)), StringComparer.OrdinalIgnoreCase);
+            // HashSet을 쓰는 이유 : List.Contains는 O(n)이라 1300 * 7348 = 955만 번의 비교가 필요
+            // HashSet은 O(1)이므로 1300번으로 끝난다.
+            // OrdinalIgnoreCase : Windows 파일 시스템이 대소문자를 구분하지 않으므로 ,이를 맞추어주는 기능
+
+            var filtered = target.Where(d => !excludeNames.Contains(Path.GetFileName(d.ImagePath))).ToList(); // 제외할 애들 빼고 다른 타겟들을 리스트화
+
+            Console.WriteLine($"  제외 전 {target.Count}장 -> 제외 후 {filtered.Count}장 (겹침 {target.Count - filtered.Count}장)");
+
+            return filtered;
+            /*
+            파일 명으로 거르는 이유
+            - casting_512x512는 같은 원본 사진의 다른 해상도 버전임. 이름 다른 거는 학습용 원본에도 없던 거라서, 이걸로 비교해야 일반화 성능이 더 나음
+            */
+        }
+
     }
 }

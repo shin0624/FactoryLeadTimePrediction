@@ -15,4 +15,14 @@
     <PackageReference Include="SciSharp.TensorFlow.Redist" Version="2.16.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- WPF 하위 프로젝트 폴더를 콘솔 프로젝트의 컴파일 대상에서 제외한다.
+         SDK 프로젝트는 자기 폴더 하위의 모든 **/*.cs 를 자동 포함(암시적 glob)하므로,
+         하위 폴더에 별도 프로젝트를 두면 그 파일까지 끌어와 빌드가 깨진다.
+         -> MainWindow.xaml.cs 가 콘솔 프로젝트에서 컴파일되어
+            'System.Windows.Media 없음'(CS0234) 에러가 났던 원인. -->
+    <Compile Remove="CastingInspector.Wpf/**/*.cs" />
+    <None Remove="CastingInspector.Wpf/**" />
+  </ItemGroup>
+
 </Project>
