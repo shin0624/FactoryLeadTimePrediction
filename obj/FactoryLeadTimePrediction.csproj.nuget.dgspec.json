@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\GitHubClone\\FactoryLeadTimePrediction\\FactoryLeadTimePrediction.csproj": {}
+    "c:\\GitHubClone\\FactoryLeadTimePrediction\\FactoryLeadTimePrediction.csproj": {}
   },
   "projects": {
-    "C:\\GitHubClone\\FactoryLeadTimePrediction\\FactoryLeadTimePrediction.csproj": {
+    "c:\\GitHubClone\\FactoryLeadTimePrediction\\FactoryLeadTimePrediction.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\GitHubClone\\FactoryLeadTimePrediction\\FactoryLeadTimePrediction.csproj",
+        "projectUniqueName": "c:\\GitHubClone\\FactoryLeadTimePrediction\\FactoryLeadTimePrediction.csproj",
         "projectName": "FactoryLeadTimePrediction",
-        "projectPath": "C:\\GitHubClone\\FactoryLeadTimePrediction\\FactoryLeadTimePrediction.csproj",
+        "projectPath": "c:\\GitHubClone\\FactoryLeadTimePrediction\\FactoryLeadTimePrediction.csproj",
         "packagesPath": "C:\\Users\\qjatn\\.nuget\\packages\\",
-        "outputPath": "C:\\GitHubClone\\FactoryLeadTimePrediction\\obj\\",
+        "outputPath": "c:\\GitHubClone\\FactoryLeadTimePrediction\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\qjatn\\AppData\\Roaming\\NuGet\\NuGet.Config"

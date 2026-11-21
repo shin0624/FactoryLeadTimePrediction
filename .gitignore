@@ -10,3 +10,4 @@
 *.jpeg
 /CastingInspector.Wpf/bin
 /CastingInspector.Wpf/obj
+*.log

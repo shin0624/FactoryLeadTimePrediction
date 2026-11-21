@@ -8,6 +8,7 @@ using FactoryLeadTimePrediction.LightGBM.B_SyntheticLeadTime;
 using FactoryLeadTimePrediction.DeepLearning.A_CastingDefectClassification;
 using TorchSharp;
 using static TorchSharp.torch;
+using FactoryLeadTimePrediction.DeepLearning.B_TorchSharpGradCAM;
 
 namespace FactoryLeadTimePrediction
 {
@@ -38,10 +39,14 @@ namespace FactoryLeadTimePrediction
             //castingInstance.StartCastingDefectClassification();
 
             // ---------- DeepLearning A : 512x512 추가 검증 ----------
-            var castingInstance = DeepLearning_CastingDefect.Instance();
-            castingInstance.StartExternalValidation();
+            //var castingInstance = DeepLearning_CastingDefect.Instance();
+            //castingInstance.StartExternalValidation();
 
-
+            // ---------- DeepLearning B : TorchSharp 단계 1 ----------
+            var tsInstance = TorchSharp_CastingDefect.Instance();
+            // tsInstance.Step1_VerifyPipeline();   // 단계 1 : 파이프라인 검증 (완료)
+             tsInstance.Step2_Train();            // 단계 2 : 학습 및 평가 (완료, test 97.62% / FN 12건)
+            //tsInstance.Step3_AnalyzeMisclassified(); // 단계 3 : 오분류 샘플 분석
 
         }
     }

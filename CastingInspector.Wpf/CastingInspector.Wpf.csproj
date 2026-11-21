@@ -19,6 +19,16 @@
         - 그래서 배포 크기가 수백 MB가 된다. ONNX Runtime을 쓰면 훨씬 가벼워지지만,
           ImageClassificationTrainer는 ONNX export를 지원하지 않는다(README 참조).
     -->
+    <PackageReference Include="TorchSharp" Version="0.107.0" />
+    <PackageReference Include="libtorch-cpu-win-x64" Version="2.10.0" />
+    <PackageReference Include="TorchVision" Version="0.107.0" />
+    <!--
+    WPF에서도 TorchSharp가 필요한 이유
+        - Grad-CAM은 추론만이 아니라 역전파(backward)를 수행한다.
+          따라서 ONNX Runtime 같은 추론 전용 런타임으로는 불가능하고 전체 프레임워크가 필요하다.
+        - 배포 크기가 libtorch 때문에 수백 MB가 된다.
+          ML.NET + TensorFlow redist 때와 같은 문제이며, XAI를 위한 불가피한 비용이다.
+    -->
   </ItemGroup>
 
   <ItemGroup>
