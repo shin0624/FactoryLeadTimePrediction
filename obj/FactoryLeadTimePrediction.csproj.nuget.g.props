@@ -13,8 +13,11 @@
     <SourceRoot Include="C:\Users\qjatn\.nuget\packages\" />
   </ItemGroup>
   <ImportGroup Condition=" '$(ExcludeRestorePackageImports)' != 'true' ">
+    <Import Project="$(NuGetPackageRoot)torchsharp\0.107.0\buildTransitive\net8.0\TorchSharp.props" Condition="Exists('$(NuGetPackageRoot)torchsharp\0.107.0\buildTransitive\net8.0\TorchSharp.props')" />
+    <Import Project="$(NuGetPackageRoot)torchvision\0.107.0\buildTransitive\net8.0\TorchVision.props" Condition="Exists('$(NuGetPackageRoot)torchvision\0.107.0\buildTransitive\net8.0\TorchVision.props')" />
     <Import Project="$(NuGetPackageRoot)scisharp.tensorflow.redist\2.16.0\build\netstandard2.0\SciSharp.TensorFlow.Redist.props" Condition="Exists('$(NuGetPackageRoot)scisharp.tensorflow.redist\2.16.0\build\netstandard2.0\SciSharp.TensorFlow.Redist.props')" />
     <Import Project="$(NuGetPackageRoot)microsoft.ml\6.0.0\build\netstandard2.0\Microsoft.ML.props" Condition="Exists('$(NuGetPackageRoot)microsoft.ml\6.0.0\build\netstandard2.0\Microsoft.ML.props')" />
     <Import Project="$(NuGetPackageRoot)lightgbm\4.6.0\build\LightGBM.props" Condition="Exists('$(NuGetPackageRoot)lightgbm\4.6.0\build\LightGBM.props')" />
+    <Import Project="$(NuGetPackageRoot)libtorch-cpu-win-x64\2.10.0\buildTransitive\netstandard2.0\libtorch-cpu-win-x64.props" Condition="Exists('$(NuGetPackageRoot)libtorch-cpu-win-x64\2.10.0\buildTransitive\netstandard2.0\libtorch-cpu-win-x64.props')" />
   </ImportGroup>
 </Project>

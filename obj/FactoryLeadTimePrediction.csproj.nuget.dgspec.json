@@ -63,6 +63,18 @@
             "SciSharp.TensorFlow.Redist": {
               "target": "Package",
               "version": "[2.16.0, )"
+            },
+            "TorchSharp": {
+              "target": "Package",
+              "version": "[0.107.0, )"
+            },
+            "TorchVision": {
+              "target": "Package",
+              "version": "[0.107.0, )"
+            },
+            "libtorch-cpu-win-x64": {
+              "target": "Package",
+              "version": "[2.10.0, )"
             }
           },
           "imports": [

@@ -21,6 +21,43 @@
           }
         }
       },
+      "libtorch-cpu-win-x64/2.10.0": {
+        "type": "package",
+        "build": {
+          "buildTransitive/netstandard2.0/libtorch-cpu-win-x64.props": {},
+          "buildTransitive/netstandard2.0/libtorch-cpu-win-x64.targets": {}
+        },
+        "runtimeTargets": {
+          "runtimes/win-x64/native/c10.dll": {
+            "assetType": "native",
+            "rid": "win-x64"
+          },
+          "runtimes/win-x64/native/libiomp5md.dll": {
+            "assetType": "native",
+            "rid": "win-x64"
+          },
+          "runtimes/win-x64/native/libiompstubs5md.dll": {
+            "assetType": "native",
+            "rid": "win-x64"
+          },
+          "runtimes/win-x64/native/torch.dll": {
+            "assetType": "native",
+            "rid": "win-x64"
+          },
+          "runtimes/win-x64/native/torch_cpu.dll": {
+            "assetType": "native",
+            "rid": "win-x64"
+          },
+          "runtimes/win-x64/native/torch_global_deps.dll": {
+            "assetType": "native",
+            "rid": "win-x64"
+          },
+          "runtimes/win-x64/native/uv.dll": {
+            "assetType": "native",
+            "rid": "win-x64"
+          }
+        }
+      },
       "LightGBM/4.6.0": {
         "type": "package",
         "build": {
@@ -520,6 +557,19 @@
           }
         }
       },
+      "SharpZipLib/1.4.0": {
+        "type": "package",
+        "compile": {
+          "lib/net6.0/ICSharpCode.SharpZipLib.dll": {
+            "related": ".pdb;.xml"
+          }
+        },
+        "runtime": {
+          "lib/net6.0/ICSharpCode.SharpZipLib.dll": {
+            "related": ".pdb;.xml"
+          }
+        }
+      },
       "SkiaSharp/3.119.2": {
         "type": "package",
         "dependencies": {
@@ -830,6 +880,61 @@
             "related": ".xml"
           }
         }
+      },
+      "TorchSharp/0.107.0": {
+        "type": "package",
+        "dependencies": {
+          "Google.Protobuf": "3.21.9",
+          "SharpZipLib": "1.4.0",
+          "SkiaSharp": "2.88.6",
+          "System.Memory": "4.5.5"
+        },
+        "compile": {
+          "lib/net8.0/TorchSharp.dll": {}
+        },
+        "runtime": {
+          "lib/net8.0/TorchSharp.dll": {}
+        },
+        "build": {
+          "buildTransitive/net8.0/TorchSharp.props": {},
+          "buildTransitive/net8.0/TorchSharp.targets": {}
+        },
+        "runtimeTargets": {
+          "runtimes/linux-x64/native/libLibTorchSharp.so": {
+            "assetType": "native",
+            "rid": "linux-x64"
+          },
+          "runtimes/osx-arm64/native/libLibTorchSharp.dylib": {
+            "assetType": "native",
+            "rid": "osx-arm64"
+          },
+          "runtimes/win-arm64/native/LibTorchSharp.dll": {
+            "assetType": "native",
+            "rid": "win-arm64"
+          },
+          "runtimes/win-x64/native/LibTorchSharp.dll": {
+            "assetType": "native",
+            "rid": "win-x64"
+          }
+        }
+      },
+      "TorchVision/0.107.0": {
+        "type": "package",
+        "dependencies": {
+          "SkiaSharp": "2.88.6",
+          "SkiaSharp.NativeAssets.Linux.NoDependencies": "2.88.6",
+          "TorchSharp": "0.107.0"
+        },
+        "compile": {
+          "lib/net8.0/TorchVision.dll": {}
+        },
+        "runtime": {
+          "lib/net8.0/TorchVision.dll": {}
+        },
+        "build": {
+          "buildTransitive/net8.0/TorchVision.props": {},
+          "buildTransitive/net8.0/TorchVision.targets": {}
+        }
       }
     }
   },
@@ -887,6 +992,28 @@
         "lib/netstandard2.0/Google.Protobuf.dll",
         "lib/netstandard2.0/Google.Protobuf.pdb",
         "lib/netstandard2.0/Google.Protobuf.xml"
+      ]
+    },
+    "libtorch-cpu-win-x64/2.10.0": {
+      "sha512": "Gr1gCbueixwQIEnWiMXyAs4/uAFBar03K+AxZm9BY3t17MFaX9rEIe9Vxz+Cguo9G6dXXOeGAO3W1OEhax74Mw==",
+      "type": "package",
+      "path": "libtorch-cpu-win-x64/2.10.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "LICENSE-LIBTORCH.txt",
+        "buildTransitive/netstandard2.0/libtorch-cpu-win-x64.props",
+        "buildTransitive/netstandard2.0/libtorch-cpu-win-x64.targets",
+        "lib/netstandard2.0/_._/empty.txt",
+        "libtorch-cpu-win-x64.2.10.0.nupkg.sha512",
+        "libtorch-cpu-win-x64.nuspec",
+        "runtimes/win-x64/native/c10.dll",
+        "runtimes/win-x64/native/libiomp5md.dll",
+        "runtimes/win-x64/native/libiompstubs5md.dll",
+        "runtimes/win-x64/native/torch.dll",
+        "runtimes/win-x64/native/torch_cpu.dll",
+        "runtimes/win-x64/native/torch_global_deps.dll",
+        "runtimes/win-x64/native/uv.dll"
       ]
     },
     "LightGBM/4.6.0": {
@@ -1250,6 +1377,27 @@
         "lib/netstandard2.0/Serilog.Sinks.Console.xml",
         "serilog.sinks.console.4.1.0.nupkg.sha512",
         "serilog.sinks.console.nuspec"
+      ]
+    },
+    "SharpZipLib/1.4.0": {
+      "sha512": "CdkbBSPIpHD8xBlu+8kDJiqc1Tf9iV89BObnqcvEbwysXSj5h1MfaeLgeeaxPZmi7CTJO8FDofBBNxBW0Vml7A==",
+      "type": "package",
+      "path": "sharpziplib/1.4.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "images/sharpziplib-nuget-256x256.png",
+        "lib/net6.0/ICSharpCode.SharpZipLib.dll",
+        "lib/net6.0/ICSharpCode.SharpZipLib.pdb",
+        "lib/net6.0/ICSharpCode.SharpZipLib.xml",
+        "lib/netstandard2.0/ICSharpCode.SharpZipLib.dll",
+        "lib/netstandard2.0/ICSharpCode.SharpZipLib.pdb",
+        "lib/netstandard2.0/ICSharpCode.SharpZipLib.xml",
+        "lib/netstandard2.1/ICSharpCode.SharpZipLib.dll",
+        "lib/netstandard2.1/ICSharpCode.SharpZipLib.pdb",
+        "lib/netstandard2.1/ICSharpCode.SharpZipLib.xml",
+        "sharpziplib.1.4.0.nupkg.sha512",
+        "sharpziplib.nuspec"
       ]
     },
     "SkiaSharp/3.119.2": {
@@ -1791,6 +1939,46 @@
         "tensorflow.net.0.100.2.nupkg.sha512",
         "tensorflow.net.nuspec"
       ]
+    },
+    "TorchSharp/0.107.0": {
+      "sha512": "HGxs37FGN+JNuLiSeAqc6jGwjDuZepEkq7+FYv1ideNoYy1VsUpky9JEDKviwbR/vCXHLjOwdzHVzJv/snyLwA==",
+      "type": "package",
+      "path": "torchsharp/0.107.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "LICENSE.txt",
+        "buildTransitive/net8.0/TorchSharp.props",
+        "buildTransitive/net8.0/TorchSharp.targets",
+        "lib/net8.0/TorchSharp.dll",
+        "lib/netstandard2.0/TorchSharp.dll",
+        "runtimes/linux-x64/native/libLibTorchSharp.so",
+        "runtimes/osx-arm64/native/libLibTorchSharp.dylib",
+        "runtimes/win-arm64/native/LibTorchSharp.dll",
+        "runtimes/win-x64/native/LibTorchSharp.dll",
+        "torchsharp.0.107.0.nupkg.sha512",
+        "torchsharp.nuspec"
+      ]
+    },
+    "TorchVision/0.107.0": {
+      "sha512": "dfemMwyObZ57B9/xrqldDoGo8tILoz+5cuoOeFsMsUQIjkZGg6QEiZnGG6cmUZoC1pzByG5JDZoppK8seFqj4g==",
+      "type": "package",
+      "path": "torchvision/0.107.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "LICENSE.txt",
+        "buildTransitive/net8.0/TorchVision.props",
+        "buildTransitive/net8.0/TorchVision.targets",
+        "buildTransitive/netstandard2.0/TorchVision.props",
+        "buildTransitive/netstandard2.0/TorchVision.targets",
+        "lib/net8.0/TorchVision.dll",
+        "lib/net8.0/_._/empty.txt",
+        "lib/netstandard2.0/TorchVision.dll",
+        "lib/netstandard2.0/_._/empty.txt",
+        "torchvision.0.107.0.nupkg.sha512",
+        "torchvision.nuspec"
+      ]
     }
   },
   "projectFileDependencyGroups": {
@@ -1799,7 +1987,10 @@
       "Microsoft.ML.ImageAnalytics >= 6.0.0",
       "Microsoft.ML.LightGbm >= 6.0.0",
       "Microsoft.ML.Vision >= 6.0.0",
-      "SciSharp.TensorFlow.Redist >= 2.16.0"
+      "SciSharp.TensorFlow.Redist >= 2.16.0",
+      "TorchSharp >= 0.107.0",
+      "TorchVision >= 0.107.0",
+      "libtorch-cpu-win-x64 >= 2.10.0"
     ]
   },
   "packageFolders": {
@@ -1864,6 +2055,18 @@
           "SciSharp.TensorFlow.Redist": {
             "target": "Package",
             "version": "[2.16.0, )"
+          },
+          "TorchSharp": {
+            "target": "Package",
+            "version": "[0.107.0, )"
+          },
+          "TorchVision": {
+            "target": "Package",
+            "version": "[0.107.0, )"
+          },
+          "libtorch-cpu-win-x64": {
+            "target": "Package",
+            "version": "[2.10.0, )"
           }
         },
         "imports": [

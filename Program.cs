@@ -6,6 +6,8 @@ using Microsoft.ML.Trainers.LightGbm;
 using FactoryLeadTimePrediction.LightGBM.A_RealDataLeadTime;
 using FactoryLeadTimePrediction.LightGBM.B_SyntheticLeadTime;
 using FactoryLeadTimePrediction.DeepLearning.A_CastingDefectClassification;
+using TorchSharp;
+using static TorchSharp.torch;
 
 namespace FactoryLeadTimePrediction
 {
@@ -38,6 +40,9 @@ namespace FactoryLeadTimePrediction
             // ---------- DeepLearning A : 512x512 추가 검증 ----------
             var castingInstance = DeepLearning_CastingDefect.Instance();
             castingInstance.StartExternalValidation();
+
+
+
         }
     }
 }

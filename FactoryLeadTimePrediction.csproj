@@ -8,11 +8,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="libtorch-cpu-win-x64" Version="2.10.0" />
     <PackageReference Include="Microsoft.ML" Version="6.0.0" />
     <PackageReference Include="Microsoft.ML.ImageAnalytics" Version="6.0.0" />
     <PackageReference Include="Microsoft.ML.LightGbm" Version="6.0.0" />
     <PackageReference Include="Microsoft.ML.Vision" Version="6.0.0" />
     <PackageReference Include="SciSharp.TensorFlow.Redist" Version="2.16.0" />
+    <PackageReference Include="TorchSharp" Version="0.107.0" />
+    <PackageReference Include="TorchVision" Version="0.107.0" />
   </ItemGroup>
 
   <ItemGroup>

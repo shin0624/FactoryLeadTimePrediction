@@ -1,11 +1,12 @@
 {
   "version": 2,
-  "dgSpecHash": "7JpyorxzusQ=",
+  "dgSpecHash": "PPRk46glseM=",
   "success": true,
   "projectFilePath": "C:\\GitHubClone\\FactoryLeadTimePrediction\\FactoryLeadTimePrediction.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\qjatn\\.nuget\\packages\\fody\\6.0.5\\fody.6.0.5.nupkg.sha512",
     "C:\\Users\\qjatn\\.nuget\\packages\\google.protobuf\\3.30.2\\google.protobuf.3.30.2.nupkg.sha512",
+    "C:\\Users\\qjatn\\.nuget\\packages\\libtorch-cpu-win-x64\\2.10.0\\libtorch-cpu-win-x64.2.10.0.nupkg.sha512",
     "C:\\Users\\qjatn\\.nuget\\packages\\lightgbm\\4.6.0\\lightgbm.4.6.0.nupkg.sha512",
     "C:\\Users\\qjatn\\.nuget\\packages\\methodboundaryaspect.fody\\2.0.148\\methodboundaryaspect.fody.2.0.148.nupkg.sha512",
     "C:\\Users\\qjatn\\.nuget\\packages\\microsoft.bcl.asyncinterfaces\\9.0.4\\microsoft.bcl.asyncinterfaces.9.0.4.nupkg.sha512",
@@ -23,6 +24,7 @@
     "C:\\Users\\qjatn\\.nuget\\packages\\scisharp.tensorflow.redist\\2.16.0\\scisharp.tensorflow.redist.2.16.0.nupkg.sha512",
     "C:\\Users\\qjatn\\.nuget\\packages\\serilog\\2.10.0\\serilog.2.10.0.nupkg.sha512",
     "C:\\Users\\qjatn\\.nuget\\packages\\serilog.sinks.console\\4.1.0\\serilog.sinks.console.4.1.0.nupkg.sha512",
+    "C:\\Users\\qjatn\\.nuget\\packages\\sharpziplib\\1.4.0\\sharpziplib.1.4.0.nupkg.sha512",
     "C:\\Users\\qjatn\\.nuget\\packages\\skiasharp\\3.119.2\\skiasharp.3.119.2.nupkg.sha512",
     "C:\\Users\\qjatn\\.nuget\\packages\\skiasharp.nativeassets.linux.nodependencies\\3.119.2\\skiasharp.nativeassets.linux.nodependencies.3.119.2.nupkg.sha512",
     "C:\\Users\\qjatn\\.nuget\\packages\\skiasharp.nativeassets.macos\\3.119.2\\skiasharp.nativeassets.macos.3.119.2.nupkg.sha512",
@@ -39,10 +41,12 @@
     "C:\\Users\\qjatn\\.nuget\\packages\\system.security.principal.windows\\5.0.0\\system.security.principal.windows.5.0.0.nupkg.sha512",
     "C:\\Users\\qjatn\\.nuget\\packages\\system.threading.channels\\9.0.4\\system.threading.channels.9.0.4.nupkg.sha512",
     "C:\\Users\\qjatn\\.nuget\\packages\\tensorflow.net\\0.100.2\\tensorflow.net.0.100.2.nupkg.sha512",
-    "C:\\Users\\qjatn\\.nuget\\packages\\microsoft.netcore.app.ref\\8.0.19\\microsoft.netcore.app.ref.8.0.19.nupkg.sha512",
-    "C:\\Users\\qjatn\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\8.0.19\\microsoft.windowsdesktop.app.ref.8.0.19.nupkg.sha512",
+    "C:\\Users\\qjatn\\.nuget\\packages\\torchsharp\\0.107.0\\torchsharp.0.107.0.nupkg.sha512",
+    "C:\\Users\\qjatn\\.nuget\\packages\\torchvision\\0.107.0\\torchvision.0.107.0.nupkg.sha512",
     "C:\\Users\\qjatn\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\8.0.19\\microsoft.aspnetcore.app.ref.8.0.19.nupkg.sha512",
-    "C:\\Users\\qjatn\\.nuget\\packages\\microsoft.netcore.app.host.win-x64\\8.0.19\\microsoft.netcore.app.host.win-x64.8.0.19.nupkg.sha512"
+    "C:\\Users\\qjatn\\.nuget\\packages\\microsoft.netcore.app.host.win-x64\\8.0.19\\microsoft.netcore.app.host.win-x64.8.0.19.nupkg.sha512",
+    "C:\\Users\\qjatn\\.nuget\\packages\\microsoft.netcore.app.ref\\8.0.19\\microsoft.netcore.app.ref.8.0.19.nupkg.sha512",
+    "C:\\Users\\qjatn\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\8.0.19\\microsoft.windowsdesktop.app.ref.8.0.19.nupkg.sha512"
   ],
   "logs": []
 }
